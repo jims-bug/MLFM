@@ -1,4 +1,4 @@
-# MLFM: Aspect-Based Sentiment Analysis with Semantic and Syntactic Multi-Layer Fusion Model
+# Aspect-Based Sentiment Analysis with Semantic and Syntactic Multi-Layer Fusion Model
 The code and datasets involved in this paper
 
 
