@@ -355,7 +355,7 @@ def main():
     parser.add_argument('--adaptiveCrossFusion_num_iterations', type=int, default=2, help='adaptiveCrossFusion dropout')
     
     # * bert
-    parser.add_argument('--pretrained_bert_name', default='.bert-base-uncased', type=str)
+    parser.add_argument('--pretrained_bert_name', default='./bert-base-uncased', type=str)
     parser.add_argument('--adam_epsilon', default=1e-8, type=float, help="Epsilon for Adam optimizer.")
     parser.add_argument('--bert_dim', type=int, default=768)
     parser.add_argument('--bert_dropout', type=float, default=0.3, help='BERT dropout rate.')
