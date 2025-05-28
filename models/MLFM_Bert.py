@@ -44,7 +44,7 @@ class GCNAbsaModel(nn.Module):
         self.gcn = GCNBert(bert, opt, opt.num_layers)
 
     def forward(self, inputs):
-        text_bert_indices, bert_segments_ids, attention_mask, deprel_adj, asp_start, asp_end, src_mask, aspect_mask= inputs
+        text_bert_indices, bert_segments_ids, attention_mask, deprel_adj, asp_start, asp_end, tok2ori_map, src_mask, aspect_mask= inputs
         h = self.gcn(inputs)    
         asp_wn = aspect_mask.sum(dim=1).unsqueeze(-1)  
         aspect_mask = aspect_mask.unsqueeze(-1).repeat(1, 1, 100)  
@@ -120,7 +120,7 @@ class GCNBert(nn.Module):
             
             return weight_adj, gcn_outputs
     def forward(self, inputs): 
-        text_bert_indices, bert_segments_ids, attention_mask, deprel_adj, asp_start, asp_end, src_mask, aspect_mask = inputs
+        text_bert_indices, bert_segments_ids, attention_mask, deprel_adj, asp_start, asp_end, tok2ori_map, src_mask, aspect_mask = inputs
         src_mask = src_mask.unsqueeze(-2) 
         batch = src_mask.size(0)
         len = src_mask.size()[2]
@@ -365,27 +365,40 @@ class AspectNeighborAttention(nn.Module):
         
     def forward(self, bert_hidden_states, dep_type_adj, inputs):
         batch_size, seq_len, hidden_size = bert_hidden_states.size()
-        text_bert_indices, bert_segments_ids, attention_mask, deprel_adj, asp_start, asp_end, src_mask, aspect_mask = inputs
+        text_bert_indices, bert_segments_ids, attention_mask, deprel_adj, asp_start, asp_end, tok2ori_map, src_mask, aspect_mask = inputs
         # Initialize output features as copies of input features
         output_hidden_states = bert_hidden_states.clone()
         bert_hidden_states = self.z_linear(bert_hidden_states)
         for b in range(batch_size):
             adj_start = asp_start[b]
             adj_end = asp_end[b]
-            
-            for asp_idx in range(adj_start, adj_end + 1):
+            ori_map = tok2ori_map[b]
+            for asp_idx in range(adj_start, adj_end):
+                
+                current_asp_repr = bert_hidden_states[b, asp_idx + 1, :]
+
+                asp_idx = ori_map[asp_idx]  # Convert to original index
+
                 # Find neighboring nodes
                 adj_mask = deprel_adj[b, asp_idx, :] > 0
                 # Corresponding dependency types are embedded
                 dep_type_embeds = dep_type_adj[b, asp_idx, adj_mask, :]
-                adj_mask = torch.roll(adj_mask, shifts = 1, dims=0)
+                # 找到值为 True 的下标
+                indices = torch.nonzero(adj_mask).flatten().tolist() 
+
                 # Representation of neighboring nodes
-                neighbor_nodes = bert_hidden_states[b, adj_mask, :]
+                temps = []
+                for i in indices:
+                    result = [x + 1 for x in torch.where(ori_map == i)[0].tolist()]
+                    temp = bert_hidden_states[b, result, :]
+                    if temp.shape[0] > 1:
+                        temp = temp.mean(dim=0, keepdim=True)
+                    temps.append(temp)
 
-                current_asp_repr = bert_hidden_states[b, asp_idx + 1, :]
-
-                if len(neighbor_nodes) == 0:
+                if len(temps) == 0:
                     continue
+                neighbor_nodes = torch.cat(temps, dim=0)
+
 
                 repeated_asp_repr = current_asp_repr.repeat(len(neighbor_nodes), 1)
 

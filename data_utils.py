@@ -392,6 +392,8 @@ class ABSAGCNData(Dataset):
             context_asp_attention_mask = np.asarray(context_asp_attention_mask, dtype='int64')
             src_mask = np.asarray(src_mask, dtype='int64')
             aspect_mask = np.asarray(aspect_mask, dtype='int64')
+            tok2ori_map = np.asarray(tok2ori_map, dtype='int64')
+            tok2ori_map = np.pad(tok2ori_map, (0, 100 - len(tok2ori_map)), mode='constant', constant_values=999)
 
             
             
@@ -404,6 +406,7 @@ class ABSAGCNData(Dataset):
                 'deprel_adj': deprel_adj,
                 'asp_start': asp_start,
                 'asp_end': asp_end,
+                'tok2ori_map': tok2ori_map,
                 'src_mask': src_mask,
                 'aspect_mask': aspect_mask,
                 'polarity': polarity
